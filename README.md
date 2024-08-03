@@ -1,6 +1,6 @@
-# Unitree RL GYM
+# Unitree Go2 RL GYM
 
-This is a simple example of using Unitree Robots for reinforcement learning, including Unitree Go2, H1, H1_2, G1
+Forked from (Unitree's RL Gym)[https://github.com/unitreerobotics/unitree_rl_gym.git] 
 
 ### Installation
 
@@ -24,7 +24,7 @@ This is a simple example of using Unitree Robots for reinforcement learning, inc
 
 5. Install unitree_rl_gym
 
-   - Navigate to the folder `unitree_rl_gym`
+   - Navigate to the folder `go2_rl_gym`
    - `pip install -e .`
 
 ### Usage
@@ -51,20 +51,4 @@ This is a simple example of using Unitree Robots for reinforcement learning, inc
    * By default, the loaded policy is the last model of the last run of the experiment folder.
    * Other runs/model iteration can be selected by setting `load_run` and `checkpoint` in the train config.
 
-### Robots Demo
 
-1. Go2
-
-https://github.com/user-attachments/assets/98395d82-d3f6-4548-b6ee-8edfce70ac3e
-
-2. H1
-
-https://github.com/user-attachments/assets/a9475a63-ea06-4327-bfa6-6a0f8065fa1c
-
-3. H1-2
-
-https://github.com/user-attachments/assets/d6cdee70-8f8a-4a50-b219-df31b269b083
-
-4. G1
-
-https://github.com/user-attachments/assets/0b554137-76bc-43f9-97e1-dd704a33d6a9
