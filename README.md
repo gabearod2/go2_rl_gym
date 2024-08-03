@@ -27,7 +27,7 @@ Forked from [Unitree's RL Gym](https://github.com/unitreerobotics/unitree_rl_gym
    - Navigate to the folder `go2_rl_gym`
    - `pip install -e .`
 
-For extra help and troubleshooting check out these links, which I found helpful
+6. For extra installation help and troubleshooting check out these web pages, which I found helpful:
    - [Setting up Isaac Gym](https://learningreinforcementlearning.com/setting-up-isaac-gym-on-an-ubuntu-laptop-785b5a15e5a9)
    - [Install Isaac Gym](https://medium.com/@piliwilliam0306/install-isaac-gym-on-ubuntu-22-04-8ebf4b86e6f7)
 
