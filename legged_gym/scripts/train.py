@@ -15,5 +15,5 @@ def train(args):
 
 if __name__ == '__main__':
     args = get_args()
-    args.headless = False
+    # args.headless = False - need to allow headless config
     train(args)

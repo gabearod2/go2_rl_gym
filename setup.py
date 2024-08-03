@@ -1,11 +1,11 @@
 from setuptools import find_packages
 from distutils.core import setup
 
-setup(name='unitree_rl_gym',
+setup(name='go2_rl_gym',
       version='1.0.0',
-      author='Unitree Robotics',
+      author='Gabriel Rodirguez',
       license="BSD-3-Clause",
       packages=find_packages(),
-      author_email='support@unitree.com',
-      description='Template RL environments for Unitree Robots',
+      author_email='gabearod2@gmail.com',
+      description='RL environment for training the Go2',
       install_requires=['isaacgym', 'rsl-rl', 'matplotlib', 'numpy==1.20', 'tensorboard'])
