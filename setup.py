@@ -3,7 +3,7 @@ from distutils.core import setup
 
 setup(name='go2_rl_gym',
       version='1.0.0',
-      author='Gabriel Rodirguez',
+      author='Gabriel Rodriguez',
       license="BSD-3-Clause",
       packages=find_packages(),
       author_email='gabearod2@gmail.com',
