@@ -4,34 +4,35 @@ Forked from [Unitree's RL Gym](https://github.com/unitreerobotics/unitree_rl_gym
 
 ### Installation
 
-1. Create a new python virtual env with python 3.6, 3.7 or 3.8 (3.8 recommended)
-2. Install pytorch 1.10 with cuda-11.3:
-
-   ```
-   pip3 install torch==1.10.0+cu113 torchvision==0.11.1+cu113 torchaudio==0.10.0+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html
-
-   ```
-3. Install Isaac Gym
-
+1. Install Isaac Gym
    - Download and install Isaac Gym Preview 4 from [https://developer.nvidia.com/isaac-gym](https://developer.nvidia.com/isaac-gym)
    - `cd isaacgym/python && pip install -e .`
    - Try running an example `cd examples && python 1080_balls_of_solitude.py`
-   - For troubleshooting check docs isaacgym/docs/index.html
-4. Install rsl_rl (PPO implementation)
+   - For extra help:
+      - [Setting up Isaac Gym](https://learningreinforcementlearning.com/setting-up-isaac-gym-on-an-ubuntu-laptop-785b5a15e5a9)
+      - [Install Isaac Gym](https://medium.com/@piliwilliam0306/install-isaac-gym-on-ubuntu-22-04-8ebf4b86e6f7)
+2. Create a new python virtual env with python 3.6, 3.7 or 3.8 (3.8 recommended), you can use the following executable:
+   ```
+   cd isaac gym
+   ./create_env_rlgpu.sh
+   conda activate rlgpu
+   ```
+4. Ensure you have the correct pytorch with cuda for your system:
+   ```
+   pip uninstall torch torchaudio torchvision # if rlgpu's version does not work with your GPU
+   pip install torch==1.10.0+cu113 torchvision==0.11.1+cu113 torchaudio==0.10.0+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html # recommended 
+   ```
+5. Install rsl_rl (PPO implementation)
 
    - Clone [https://github.com/leggedrobotics/rsl_rl](https://github.com/leggedrobotics/rsl_rl)
    - `cd rsl_rl && git checkout v1.0.2 && pip install -e .`
 
-5. Install unitree_rl_gym
-
+6. Install go2_rl_gym
+   - Clone this repository
    - Navigate to the folder `go2_rl_gym`
    - `pip install -e .`
 
-6. For extra installation help and troubleshooting check out these web pages, which I found helpful:
-   - [Setting up Isaac Gym](https://learningreinforcementlearning.com/setting-up-isaac-gym-on-an-ubuntu-laptop-785b5a15e5a9)
-   - [Install Isaac Gym](https://medium.com/@piliwilliam0306/install-isaac-gym-on-ubuntu-22-04-8ebf4b86e6f7)
-
-### Usage
+### Usage (From root directory)
 
 1. Train:
    `python legged_gym/scripts/train.py --task=go2`
