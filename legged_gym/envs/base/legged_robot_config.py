@@ -16,7 +16,7 @@ class LeggedRobotCfg(BaseConfig):
 
 
     class terrain:
-        mesh_type = 'plane' # "heightfield" # none, plane, heightfield or trimesh
+        mesh_type = 'plane' # Anything other than plane here will be trimesh.
         horizontal_scale = 0.1 # [m]
         vertical_scale = 0.005 # [m]
         border_size = 25 # [m]
