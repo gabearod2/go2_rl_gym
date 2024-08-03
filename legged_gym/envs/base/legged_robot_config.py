@@ -3,13 +3,17 @@ from .base_config import BaseConfig
 class LeggedRobotCfg(BaseConfig):
     class env:
         num_envs = 4096
-        num_observations = 48
+        num_observations = 49 # change to include foot sensor ????
         num_privileged_obs = None # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
+        # need to configure privileged observations for tracking reward!
         num_actions = 12
         env_spacing = 3.  # not used with heightfields/trimeshes 
         send_timeouts = True # send time out information to the algorithm
         episode_length_s = 20 # episode length in seconds
         test = False
+        #history_encoding = True
+        #include_foot_contacts=True
+
 
     class terrain:
         mesh_type = 'plane' # "heightfield" # none, plane, heightfield or trimesh
@@ -101,16 +105,19 @@ class LeggedRobotCfg(BaseConfig):
     class rewards:
         class scales:
             termination = -0.0
+            # tracking rewards
             tracking_lin_vel = 1.0
             tracking_ang_vel = 0.5
+            # regularization rewards
             lin_vel_z = -2.0
             ang_vel_xy = -0.05
             orientation = -0.
-            torques = -0.00001
+            torques = -0.0002
             dof_vel = -0.
             dof_acc = -2.5e-7
+            dof_pos_limits = -10.0
             base_height = -0. 
-            feet_air_time =  1.0
+            feet_air_time =  1.5
             collision = -1.
             feet_stumble = -0.0 
             action_rate = -0.01

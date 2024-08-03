@@ -13,6 +13,7 @@ from typing import Tuple, Dict
 
 from legged_gym import LEGGED_GYM_ROOT_DIR
 from legged_gym.envs.base.base_task import BaseTask
+from legged_gym.utils.terrain import Terrain
 from legged_gym.utils.math import wrap_to_pi
 from legged_gym.utils.isaacgym_utils import get_euler_xyz as get_euler_xyz_in_tensor
 from legged_gym.utils.helpers import class_to_dict
@@ -22,7 +23,7 @@ class LeggedRobot(BaseTask):
     def __init__(self, cfg: LeggedRobotCfg, sim_params, physics_engine, sim_device, headless):
         """ Parses the provided config file,
             calls create_sim() (which creates, simulation and environments),
-            initilizes pytorch buffers used during training
+            initializes pytorch buffers used during training
 
         Args:
             cfg (Dict): Environment config file
@@ -101,6 +102,7 @@ class LeggedRobot(BaseTask):
         self._post_physics_step_callback()
 
         # compute observations, rewards, resets, ...
+        self.binary_foot_contacts()
         self.check_termination()
         self.compute_reward()
         env_ids = self.reset_buf.nonzero(as_tuple=False).flatten()
@@ -173,33 +175,47 @@ class LeggedRobot(BaseTask):
             rew = self._reward_termination() * self.reward_scales["termination"]
             self.rew_buf += rew
             self.episode_sums["termination"] += rew
+
+    def binary_foot_contacts(self):
+        contact_threshold = 10.0
+        contact_foot_zs = self.contact_forces[:, self.feet_indices, 2]
+        self.contact_states = (contact_foot_zs > contact_threshold).float()
     
     def compute_observations(self):
-        """ Computes observations
+        """ 
+        Computes observations
         """
-        self.obs_buf = torch.cat((  self.base_lin_vel * self.obs_scales.lin_vel,
-                                    self.base_ang_vel  * self.obs_scales.ang_vel,
-                                    self.projected_gravity,
-                                    self.commands[:, :3] * self.commands_scale,
-                                    (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    self.dof_vel * self.obs_scales.dof_vel,
-                                    self.actions
+        self.obs_buf = torch.cat((  # self.base_lin_vel  * self.obs_scales.lin_vel, # [N, 3]
+                                    self.base_ang_vel  * self.obs_scales.ang_vel, # [N, 3]
+                                    self.contact_states, # [N,4]
+                                    self.projected_gravity, # [N,3]
+                                    self.commands[:, :3] * self.commands_scale, # [N, 3]
+                                    (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos, # [N, 12]
+                                    self.dof_vel * self.obs_scales.dof_vel,  # [N, 12]
+                                    self.actions # [N, 12]
                                     ),dim=-1)
+        # print(self.obs_buf.shape)
         # add perceptive inputs if not blind
         # add noise if needed
         if self.add_noise:
             self.obs_buf += (2 * torch.rand_like(self.obs_buf) - 1) * self.noise_scale_vec
 
     def create_sim(self):
-        """ Creates simulation, terrain and evironments
+        """ 
+        Creates simulation, terrain and environments
         """
         self.up_axis_idx = 2 # 2 for z, 1 for y -> adapt gravity accordingly
         self.sim = self.gym.create_sim(self.sim_device_id, self.graphics_device_id, self.physics_engine, self.sim_params)
-        self._create_ground_plane()
+        if self.cfg.terrain.mesh_type == "plane":
+            self._create_ground_plane()
+        else:
+            self.terrain = Terrain(self.cfg.terrain, self.num_envs)
+            self._create_trimesh()
         self._create_envs()
 
     def set_camera(self, position, lookat):
-        """ Set camera position and direction
+        """ 
+        Set camera position and direction
         """
         cam_pos = gymapi.Vec3(position[0], position[1], position[2])
         cam_target = gymapi.Vec3(lookat[0], lookat[1], lookat[2])
@@ -343,11 +359,11 @@ class LeggedRobot(BaseTask):
                                               gymtorch.unwrap_tensor(self.dof_state),
                                               gymtorch.unwrap_tensor(env_ids_int32), len(env_ids_int32))
     def _reset_root_states(self, env_ids):
-        """ Resets ROOT states position and velocities of selected environmments
+        """ Resets ROOT states position and velocities of selected environments
             Sets base position based on the curriculum
             Selects randomized base velocities within -0.5:0.5 [m/s, rad/s]
         Args:
-            env_ids (List[int]): Environemnt ids
+            env_ids (List[int]): Environment ids
         """
         # base position
         if self.custom_origins:
@@ -399,13 +415,14 @@ class LeggedRobot(BaseTask):
         self.add_noise = self.cfg.noise.add_noise
         noise_scales = self.cfg.noise.noise_scales
         noise_level = self.cfg.noise.noise_level
-        noise_vec[:3] = noise_scales.lin_vel * noise_level * self.obs_scales.lin_vel
-        noise_vec[3:6] = noise_scales.ang_vel * noise_level * self.obs_scales.ang_vel
-        noise_vec[6:9] = noise_scales.gravity * noise_level
-        noise_vec[9:12] = 0. # commands
-        noise_vec[12:12+self.num_actions] = noise_scales.dof_pos * noise_level * self.obs_scales.dof_pos
-        noise_vec[12+self.num_actions:12+2*self.num_actions] = noise_scales.dof_vel * noise_level * self.obs_scales.dof_vel
-        noise_vec[12+2*self.num_actions:12+3*self.num_actions] = 0. # previous actions
+        #noise_vec[:3] = noise_scales.lin_vel * noise_level * self.obs_scales.lin_vel
+        noise_vec[:3] = noise_scales.ang_vel * noise_level * self.obs_scales.ang_vel
+        noise_vec[3:7] = 0. # foot_contacts - no noise
+        noise_vec[7:10] = noise_scales.gravity * noise_level
+        noise_vec[10:13] = 0. # commands - no noise
+        noise_vec[13:13+self.num_actions] = noise_scales.dof_pos * noise_level * self.obs_scales.dof_pos
+        noise_vec[13+self.num_actions:13+2*self.num_actions] = noise_scales.dof_vel * noise_level * self.obs_scales.dof_vel
+        noise_vec[13+2*self.num_actions:13+3*self.num_actions] = 0. # previous actions
 
         return noise_vec
 
@@ -473,7 +490,7 @@ class LeggedRobot(BaseTask):
         self.default_dof_pos = self.default_dof_pos.unsqueeze(0)
 
     def _prepare_reward_function(self):
-        """ Prepares a list of reward functions, whcih will be called to compute the total reward.
+        """ Prepares a list of reward functions, which will be called to compute the total reward.
             Looks for self._reward_<REWARD_NAME>, where <REWARD_NAME> are names of all non zero reward scales in the cfg.
         """
         # remove zero scales + multiply non-zero ones by dt
@@ -506,6 +523,46 @@ class LeggedRobot(BaseTask):
         plane_params.dynamic_friction = self.cfg.terrain.dynamic_friction
         plane_params.restitution = self.cfg.terrain.restitution
         self.gym.add_ground(self.sim, plane_params)
+
+    def _create_trimesh(self):
+        """ Adds a triangle mesh terrain to the simulation, sets parameters based on the cfg.
+        # """
+        tm_params = gymapi.TriangleMeshParams()
+        tm_params.nb_vertices = self.terrain.vertices.shape[0]
+        tm_params.nb_triangles = self.terrain.triangles.shape[0]
+
+        tm_params.transform.p.x = -self.terrain.cfg.border_size 
+        tm_params.transform.p.y = -self.terrain.cfg.border_size
+        tm_params.transform.p.z = 0.0
+        tm_params.static_friction = self.cfg.terrain.static_friction
+        tm_params.dynamic_friction = self.cfg.terrain.dynamic_friction
+        tm_params.restitution = self.cfg.terrain.restitution
+        self.gym.add_triangle_mesh(self.sim, self.terrain.vertices.flatten(order='C'), self.terrain.triangles.flatten(order='C'), tm_params)   
+        self.height_samples = torch.tensor(self.terrain.heightsamples).view(self.terrain.tot_rows, self.terrain.tot_cols).to(self.device)
+
+    def attach_camera(self, i, env_handle, actor_handle):
+        if self.cfg.depth.use_camera:
+            config = self.cfg.depth
+            camera_props = gymapi.CameraProperties()
+            camera_props.width = self.cfg.depth.original[0]
+            camera_props.height = self.cfg.depth.original[1]
+            camera_props.enable_tensors = True
+            camera_horizontal_fov = self.cfg.depth.horizontal_fov 
+            camera_props.horizontal_fov = camera_horizontal_fov
+
+            camera_handle = self.gym.create_camera_sensor(env_handle, camera_props)
+            self.cam_handles.append(camera_handle)
+            
+            local_transform = gymapi.Transform()
+            
+            camera_position = np.copy(config.position)
+            camera_angle = np.random.uniform(config.angle[0], config.angle[1])
+            
+            local_transform.p = gymapi.Vec3(*camera_position)
+            local_transform.r = gymapi.Quat.from_euler_zyx(0, np.radians(camera_angle), 0)
+            root_handle = self.gym.get_actor_root_rigid_body_handle(env_handle, actor_handle)
+            
+            self.gym.attach_camera_to_body(camera_handle, env_handle, root_handle, local_transform, gymapi.FOLLOW_TRANSFORM)
 
     def _create_envs(self):
         """ Creates environments:
