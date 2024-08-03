@@ -22,7 +22,7 @@ Forked from [Unitree's RL Gym](https://github.com/unitreerobotics/unitree_rl_gym
    - Clone [https://github.com/leggedrobotics/rsl_rl](https://github.com/leggedrobotics/rsl_rl)
    - `cd rsl_rl && git checkout v1.0.2 && pip install -e .`
 
-5. Install unitree_rl_gym
+5. Install go2_rl_gym
 
    - Navigate to the folder `go2_rl_gym`
    - `pip install -e .`
