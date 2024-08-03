@@ -1,6 +1,6 @@
 # Unitree Go2 RL GYM
 
-Forked from (Unitree's RL Gym)[https://github.com/unitreerobotics/unitree_rl_gym.git] 
+Forked from [Unitree's RL Gym](https://github.com/unitreerobotics/unitree_rl_gym.git) 
 
 ### Installation
 
