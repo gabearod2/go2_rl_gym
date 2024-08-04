@@ -2,8 +2,8 @@ from .base_config import BaseConfig
 
 class LeggedRobotCfg(BaseConfig):
     class env:
-        num_envs = 4096
-        num_observations = 49 # change to include foot sensor ????
+        num_envs = 4096 # can be changed in command line 
+        num_observations = 49 # changed to include foot sensor, no base lin vel.
         num_privileged_obs = None # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
         # need to configure privileged observations for tracking reward!
         num_actions = 12
