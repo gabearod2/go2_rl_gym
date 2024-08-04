@@ -7,7 +7,7 @@ import os
 from isaacgym.torch_utils import *
 from isaacgym import gymtorch, gymapi, gymutil
 
-import torch
+import torch, torchvision
 from torch import Tensor
 from typing import Tuple, Dict
 
@@ -18,6 +18,32 @@ from legged_gym.utils.math import wrap_to_pi
 from legged_gym.utils.isaacgym_utils import get_euler_xyz as get_euler_xyz_in_tensor
 from legged_gym.utils.helpers import class_to_dict
 from .legged_robot_config import LeggedRobotCfg
+
+from tqdm import tqdm
+import cv2
+import matplotlib.pyplot as plt
+
+def euler_from_quaternion(quat_angle):
+        """
+        Convert a quaternion into euler angles (roll, pitch, yaw)
+        roll is rotation around x in radians (counterclockwise)
+        pitch is rotation around y in radians (counterclockwise)
+        yaw is rotation around z in radians (counterclockwise)
+        """
+        x = quat_angle[:,0]; y = quat_angle[:,1]; z = quat_angle[:,2]; w = quat_angle[:,3]
+        t0 = +2.0 * (w * x + y * z)
+        t1 = +1.0 - 2.0 * (x * x + y * y)
+        roll_x = torch.atan2(t0, t1)
+     
+        t2 = +2.0 * (w * y - z * x)
+        t2 = torch.clip(t2, -1, 1)
+        pitch_y = torch.asin(t2)
+     
+        t3 = +2.0 * (w * z + x * y)
+        t4 = +1.0 - 2.0 * (y * y + z * z)
+        yaw_z = torch.atan2(t3, t4)
+     
+        return roll_x, pitch_y, yaw_z # in radians
 
 class LeggedRobot(BaseTask):
     def __init__(self, cfg: LeggedRobotCfg, sim_params, physics_engine, sim_device, headless):
@@ -36,16 +62,26 @@ class LeggedRobot(BaseTask):
         self.cfg = cfg
         self.sim_params = sim_params
         self.height_samples = None
-        self.debug_viz = False
+        self.debug_viz = True # changed
         self.init_done = False
         self._parse_cfg(self.cfg)
         super().__init__(self.cfg, sim_params, physics_engine, sim_device, headless)
+
+        self.resize_transform = torchvision.transforms.Resize((self.cfg.depth.resized[1], self.cfg.depth.resized[0]), 
+                                                              interpolation=torchvision.transforms.InterpolationMode.BICUBIC)
+        
+
 
         if not self.headless:
             self.set_camera(self.cfg.viewer.pos, self.cfg.viewer.lookat)
         self._init_buffers()
         self._prepare_reward_function()
         self.init_done = True
+        #self.global_counter = 0
+        #self.total_env_steps_counter = 0
+
+        # self.reset_idx(torch.arange(self.num_envs, device=self.device))
+        # self.post_physics_step()
 
     def step(self, actions):
         """ Apply actions, simulate, call self.post_physics_step()
@@ -56,6 +92,9 @@ class LeggedRobot(BaseTask):
 
         clip_actions = self.cfg.normalization.clip_actions
         self.actions = torch.clip(actions, -clip_actions, clip_actions).to(self.device)
+        
+        
+        
         # step physics and render each frame
         self.render()
         for _ in range(self.cfg.control.decimation):
@@ -79,6 +118,26 @@ class LeggedRobot(BaseTask):
         if self.privileged_obs_buf is not None:
             self.privileged_obs_buf = torch.clip(self.privileged_obs_buf, -clip_obs, clip_obs)
         return self.obs_buf, self.privileged_obs_buf, self.rew_buf, self.reset_buf, self.extras
+    
+    #### DEPTH FUNCTIONS ####
+    def normalize_depth_image(self, depth_image):
+        depth_image = depth_image * -1
+        depth_image = (depth_image - self.cfg.depth.near_clip) / (self.cfg.depth.far_clip - self.cfg.depth.near_clip)  - 0.5
+        return depth_image
+    
+    def process_depth_image(self, depth_image, env_id):
+        # These operations are replicated on the hardware
+        depth_image = self.crop_depth_image(depth_image)
+        depth_image += self.cfg.depth.dis_noise * 2 * (torch.rand(1)-0.5)[0]
+        depth_image = torch.clip(depth_image, -self.cfg.depth.far_clip, -self.cfg.depth.near_clip)
+        depth_image = self.resize_transform(depth_image[None, :]).squeeze()
+        depth_image = self.normalize_depth_image(depth_image)
+        return depth_image
+
+    def crop_depth_image(self, depth_image):
+        # crop 30 pixels from the left and right and and 20 pixels from bottom and return croped image
+        return depth_image[:-2, 4:-4]
+
 
     def post_physics_step(self):
         """ check terminations, compute observations and rewards
@@ -426,7 +485,7 @@ class LeggedRobot(BaseTask):
 
         return noise_vec
 
-    #----------------------------------------
+    #---------------------------------------------------------------------------------------------
     def _init_buffers(self):
         """ Initialize torch tensors which will contain simulation states and processed quantities
         """

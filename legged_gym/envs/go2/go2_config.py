@@ -47,6 +47,6 @@ class GO2RoughCfgPPO( LeggedRobotCfgPPO ):
         entropy_coef = 0.01
     class runner( LeggedRobotCfgPPO.runner ):
         run_name = ''
-        experiment_name = 'plane_no_lin_go2'
+        experiment_name = 'student_teacher_go2'
 
   

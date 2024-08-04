@@ -3,7 +3,8 @@ from .base_config import BaseConfig
 class LeggedRobotCfg(BaseConfig):
     class env:
         num_envs = 4096
-        num_observations = 49 # change to include foot sensor ????
+        num_scan = 132
+        num_observations = 49 + num_scan # change to include foot sensor ????
         num_privileged_obs = None # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
         # need to configure privileged observations for tracking reward!
         num_actions = 12
@@ -14,6 +15,28 @@ class LeggedRobotCfg(BaseConfig):
         #history_encoding = True
         #include_foot_contacts=True
 
+    class depth:
+        use_camera = False
+        camera_num_envs = 192
+        camera_terrain_num_rows = 10
+        camera_terrain_num_cols = 20
+
+        position = [0.32, 0, 0.0725]  # front camera
+        angle = [-5, 5]  # positive pitch down - NOT SURE   
+
+        update_interval = 5  # 5 works without retraining, 8 worse
+
+        original = (106, 60)
+        resized = (87, 58)
+        horizontal_fov = 87
+        # buffer_len = 0 # 0 for easy implementation? was 2
+        
+        near_clip = 0
+        far_clip = 2
+        dis_noise = 0.0
+        
+        scale = 1
+        invert = True
 
     class terrain:
         mesh_type = 'plane' # Anything other than plane here will be trimesh.
@@ -95,12 +118,16 @@ class LeggedRobotCfg(BaseConfig):
 
     class domain_rand:
         randomize_friction = True
-        friction_range = [0.5, 1.25]
-        randomize_base_mass = False
+        friction_range = [0.6, 1.25]
+        randomize_base_mass = False # True
         added_mass_range = [-1., 1.]
         push_robots = True
         push_interval_s = 15
         max_push_vel_xy = 1.
+
+        # randomize_motor = True --> from extreme parkour. Integrate later. 
+        # delay_update_global_steps = 24 * 8000 # delay
+        # action_delay = False
 
     class rewards:
         class scales:
@@ -180,8 +207,11 @@ class LeggedRobotCfg(BaseConfig):
 class LeggedRobotCfgPPO(BaseConfig):
     seed = 1
     runner_class_name = 'OnPolicyRunner'
+
     class policy:
         init_noise_std = 1.0
+        continue_from_last_std = True # -- TODO: CHECK
+        scan_encoder_dims = [128, 64, 32]
         actor_hidden_dims = [512, 256, 128]
         critic_hidden_dims = [512, 256, 128]
         activation = 'elu' # can be elu, relu, selu, crelu, lrelu, tanh, sigmoid
@@ -204,6 +234,7 @@ class LeggedRobotCfgPPO(BaseConfig):
         lam = 0.95
         desired_kl = 0.01
         max_grad_norm = 1.
+        
 
     class runner:
         policy_class_name = 'ActorCritic'
@@ -212,8 +243,8 @@ class LeggedRobotCfgPPO(BaseConfig):
         max_iterations = 1500 # number of policy updates
 
         # logging
-        save_interval = 50 # check for potential saves every this many iterations
-        experiment_name = 'test'
+        save_interval = 100 # check for potential saves every this many iterations
+        experiment_name = 'rough_go2_scan'
         run_name = ''
         # load and resume
         resume = False
