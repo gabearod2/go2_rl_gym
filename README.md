@@ -17,7 +17,7 @@ Forked from [Unitree's RL Gym](https://github.com/unitreerobotics/unitree_rl_gym
    ./create_env_rlgpu.sh
    conda activate rlgpu
    ```
-4. Ensure you have the correct pytorch with cuda for your system:
+4. Ensure you have the correct pytorch with cuda for your system. I am using torch==1.13.1+cu117 torchvision==0.14.1+cu117 torchaudio==0.13.1+cu117 with an NVIDIA GeForce RTX 4090 (Notebook):
    ```
    pip uninstall torch torchaudio torchvision # if rlgpu's version does not work with your GPU
    pip install torch==1.10.0+cu113 torchvision==0.11.1+cu113 torchaudio==0.10.0+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html # recommended 
